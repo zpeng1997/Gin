@@ -37,6 +37,7 @@ func main() {
 
 	// 全局的 中间件, Global Middleware
 	r.Use(GinLike.Logger())
+	r.Use(GinLike.Recovery())
 	r.SetFuncMap(template.FuncMap{
 		"FormatAsDate": FormatAsDate,
 	})
@@ -62,6 +63,16 @@ func main() {
 			"now":   time.Date(2019, 8, 17, 0, 0, 0, 0, time.UTC),
 		})
 	})
+
+	// test Recovery()
+	// search for log and find out bugs
+	// index out of range for testing Recovery()
+	r.GET("/panic", func(c *GinLike.Context) {
+		names := []string{"gin like music"}
+		c.String(http.StatusOK, names[100])
+	})
+
+
 	//v1 := r.Group("/v1")
 	//{
 	//	v1.GET("/book", func(conn *GinLike.Context) {
