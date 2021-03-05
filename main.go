@@ -7,25 +7,31 @@ import (
 
 func main() {
 	r := GinLike.Default()
-	r.GET("/", func(conn *GinLike.Context){
-		conn.HTML(http.StatusOK, "<h1>Hello Gopher!</h1>")
+	r.GET("/index", func(c *GinLike.Context) {
+		c.HTML(http.StatusOK, "<h1>Index Page</h1>")
 	})
-	r.GET("/book", func(conn *GinLike.Context){
-		conn.String(http.StatusOK, "hello %s, you're at %s\n", conn.Query("name"), conn.Path)
-	})
-	r.GET("/book/:name", func(conn *GinLike.Context){
-		conn.String(http.StatusOK, "hello %s, you're at %s\n", conn.Param("name"), conn.Path)
-	})
-	r.GET("/asset/*filepath", func(conn *GinLike.Context){
-		conn.JSON(http.StatusOK, GinLike.H{
-			"filepath": conn.Param("filepath"),
+	v1 := r.Group("/v1")
+	{
+		v1.GET("/book", func(conn *GinLike.Context) {
+			conn.HTML(http.StatusOK, "<h1>Hello Gopher!</h1>")
 		})
-	})
-	r.POST("/login", func(conn *GinLike.Context) {
-		conn.JSON(http.StatusOK, GinLike.H{
-			"username": conn.PostForm("username"),
-			"password": conn.PostForm("password"),
+		v1.GET("/hello", func(conn *GinLike.Context) {
+			conn.String(http.StatusOK, "hello %s, you're at %s\n", conn.Param("name"), conn.Path)
 		})
-	})
+	}
+	v2 := r.Group("/v2")
+	{
+		v2.GET("/asset/*filepath", func(conn *GinLike.Context) {
+			conn.JSON(http.StatusOK, GinLike.H{
+				"filepath": conn.Param("filepath"),
+			})
+		})
+		v2.POST("/login", func(conn *GinLike.Context) {
+			conn.JSON(http.StatusOK, GinLike.H{
+				"username": conn.PostForm("username"),
+				"password": conn.PostForm("password"),
+			})
+		})
+	}
 	r.Run(":9000")
 }
