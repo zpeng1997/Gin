@@ -18,16 +18,29 @@ type Context struct{
 	// Response info
 	Params map[string]string
 	StatusCode int
+	// middleware functions
+	handlers []HandlerFunc
+	index int
 }
 
-func newContext(w http.ResponseWriter, r *http.Request) *Context {
+// 初始化方式
+func newContext(w http.ResponseWriter, req *http.Request) *Context {
 	return &Context{
-		w,
-		r,
-		r.URL.Path,
-		r.Method,
-		 make(map[string]string, 0),
-		0,
+		Path:   req.URL.Path,
+		Method: req.Method,
+		Req:    req,
+		Writer: w,
+		index:  -1,
+	}
+}
+
+// 这部分逻辑很重要,
+// 保证了中间件, 按照顺序"并发"执行
+func (c *Context) Next(){
+	c.index ++
+	s := len(c.handlers)
+	for ; c.index < s; c.index ++{
+		c.handlers[c.index](c)
 	}
 }
 

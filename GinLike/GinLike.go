@@ -72,6 +72,7 @@ package GinLike
 
 import (
 	"net/http"
+	"strings"
 )
 
 type HandlerFunc func(*Context)
@@ -80,16 +81,16 @@ type HandlerFunc func(*Context)
 // 以后记得优化一下!!
 type (
 	RouterGroup struct{
-	prefix string
-	middlewares []HandlerFunc // support middleware
-	parent *RouterGroup // support nesting
-	engine *Engine // all groups share a engine instance
+		prefix string
+		middlewares []HandlerFunc // support middleware
+		parent *RouterGroup // support nesting
+		engine *Engine // all groups share a engine instance
 	}
 
     Engine struct{
-    *RouterGroup // 嵌套的写法, 不用写变量名
-	router *router
-	groups []*RouterGroup
+		*RouterGroup // 嵌套的写法, 不用写变量名
+		router *router
+		groups []*RouterGroup
 	}
 )
 
@@ -142,11 +143,28 @@ func (routerGroup *RouterGroup) PUT(pattern string, handler HandlerFunc){
 some other methods can implement by yourself....
 */
 
-func (routerGroup *RouterGroup)Run(address string)(err error){
+// add middlewares handle functions...
+func (routerGroup *RouterGroup) Use(middlewares ...HandlerFunc){
+	routerGroup.middlewares = append(routerGroup.middlewares, middlewares...)
+}
+
+func (routerGroup *RouterGroup) Run(address string)(err error){
 	return http.ListenAndServe(address, routerGroup.engine)
 }
 
+// 一种是通过addRoute动态注册的函数.
+// 另一种是中间件, 在ServeHTTP事先写好, 对所有满足的路由都全局执行. 通过上下文Context传过去
+// 最后在router.handler()一起执行.
 func (engine *Engine)ServeHTTP(w http.ResponseWriter, r *http.Request){
+	var middlewares []HandlerFunc
+	// 按照组的方式全局覆盖.
+	for _, group := range engine.groups{
+		// 输入的URL是否 触碰到 prefix
+		if strings.HasPrefix(r.URL.Path, group.prefix){}
+		middlewares = append(middlewares, group.middlewares...)
+	}
 	conn := newContext(w, r)
+	// 区分middlewares的函数 和 engine 继承 ServeHTTP 之后的 GET, PUT
+	conn.handlers = middlewares
 	engine.router.handle(conn)
 }

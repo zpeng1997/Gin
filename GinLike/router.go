@@ -82,8 +82,14 @@ func (r *router) handle(c *Context){
 		// connection between Context and Router!
 		// it's important
 		key := c.Method + "-" + n.pattern
-		r.handlers[key](c)
+		// 两种函数都放到一起了
+		c.handlers = append(c.handlers, r.handlers[key])
+		//r.handlers[key](c)
 	}else{
-		c.String(http.StatusNotFound, "404 NOT FOUND%s\n", c.Path)
+		c.handlers = append(c.handlers, func(c *Context){
+			c.String(http.StatusNotFound, "404 NOT FOUND%s\n", c.Path)
+		})
 	}
+	//放在这里一起执行, 中间执行, 其逻辑导致"并行"效果
+	c.Next()
 }
