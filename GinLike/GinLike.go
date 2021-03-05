@@ -71,7 +71,9 @@
 package GinLike
 
 import (
+	"html/template"
 	"net/http"
+	"path"
 	"strings"
 )
 
@@ -91,6 +93,9 @@ type (
 		*RouterGroup // 嵌套的写法, 不用写变量名
 		router *router
 		groups []*RouterGroup
+		// html render
+		htmlTemplates *template.Template
+		funcMap template.FuncMap
 	}
 )
 
@@ -166,5 +171,39 @@ func (engine *Engine)ServeHTTP(w http.ResponseWriter, r *http.Request){
 	conn := newContext(w, r)
 	// 区分middlewares的函数 和 engine 继承 ServeHTTP 之后的 GET, PUT
 	conn.handlers = middlewares
+	conn.engine = engine
 	engine.router.handle(conn)
+}
+
+// 得到文件路径
+// 并把文件发送过去
+func (routerGroup *RouterGroup) createStaticHandler(relativePath string, fs http.FileSystem) HandlerFunc{
+	absolutePath := path.Join(routerGroup.prefix, relativePath)
+	fileServer := http.StripPrefix(absolutePath, http.FileServer(fs))
+	return func(c *Context){
+		file := c.Param("filepath")
+		if _, err := fs.Open(file); err != nil{
+			c.Status(http.StatusNotFound)
+			return
+		}
+		// 发送文件过去
+		fileServer.ServeHTTP(c.Writer, c.Req)
+	}
+}
+
+// 把对应的路径和文件注册上去.
+// 当然这是静态文件
+func (routerGroup *RouterGroup) Static(relativePath string, root string){
+	handler := routerGroup.createStaticHandler(relativePath, http.Dir(root))
+	urlPattern := path.Join(relativePath, "/*filepath")
+	routerGroup.GET(urlPattern, handler)
+}
+
+// html render
+func (engine *Engine) SetFuncMap(funcMap template.FuncMap){
+	engine.funcMap = funcMap
+}
+
+func (engine *Engine) LoadHTMLGlob(pattern string){
+	engine.htmlTemplates = template.Must(template.New("").Funcs(engine.funcMap).ParseGlob(pattern))
 }

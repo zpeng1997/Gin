@@ -3,6 +3,7 @@ package GinLike
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 )
 
@@ -21,6 +22,8 @@ type Context struct{
 	// middleware functions
 	handlers []HandlerFunc
 	index int
+	//
+	engine *Engine
 }
 
 // 初始化方式
@@ -94,11 +97,14 @@ func (c *Context) Data(code int, data[]byte){
 	}
 }
 
-func (c *Context) HTML(code int, html string){
+func (c *Context) HTML(code int, name string, data interface{}){
 	c.SetHeader("Content-Type", "text/html")
 	c.Status(code)
-	_, err := c.Writer.Write([]byte(html))
-	if err != nil {
-		fmt.Println( "HTML Write error: %v", err)
+	//_, err := c.Writer.Write([]byte(html))
+	//if err != nil {
+	//	fmt.Println( "HTML Write error: %v", err)
+	//}
+	if err:=c.engine.htmlTemplates.ExecuteTemplate(c.Writer, name, data); err != nil{
+		log.Fatal(500, err.Error())
 	}
 }
