@@ -16,6 +16,7 @@ type Context struct{
 	Path string
 	Method string
 	// Response info
+	Params map[string]string
 	StatusCode int
 }
 
@@ -25,8 +26,15 @@ func newContext(w http.ResponseWriter, r *http.Request) *Context {
 		r,
 		r.URL.Path,
 		r.Method,
+		 make(map[string]string, 0),
 		0,
 	}
+}
+
+// Context get params after router.parsePattern
+func (c *Context)Param(key string) string{
+	value, _ := c.Params[key]
+	return value
 }
 
 // reference 《Go Web》, then know how to use http api
